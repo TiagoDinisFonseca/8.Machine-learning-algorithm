@@ -1,0 +1,132 @@
+---
+title: "Barbell lifts: identifying bad habits" 
+author: "Tiago Fonseca"
+date: "20-11-2014"
+output: html_document
+---
+
+```{r libraries, message = FALSE}
+  library(caret)
+```
+
+This is part of the coursera course Pratical Machine Learning.
+The main goal is to build a machine learning algorithm that is capable to identify bad habits in barbell lifts.
+
+*The code is let visible because of the grading process, otherwise it should be hidden in the html file.*
+
+## Motivation
+
+The authors of this study claim that a big effort is being made to learn how to automatically (this means, using sensors) detect the activity of a person.
+But, little effort is put on identifying if exercise is being well executed or not. 
+Therefore, they propose themselves to build a machine learning algorithm to identify if such exercise (here we talk about barbell lift) is well executed or not.
+
+The data is coming from the **quantified self movement**, a group of enthusiasts who take measurements about themselves using devices like Jawbone Up, Nike FuelBand or Fitbit.
+
+The available data is the outcome of accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They do barbell lift in several different ways, only one is the correct one and the other four correspond to commun mistakes.
+
+See more information at their website:  [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.puc-rio.br/har). 
+
+## General set up
+
+### Loading data
+
+We import the data from the csv files
+
+```{r load_data, cache = TRUE}
+  read.table("pml-testing.csv", sep = ",", header = TRUE) -> testing
+  read.table("pml-training.csv", sep = ",", header = TRUE) -> training
+```
+
+### Cleaning data
+
+There is a lot of columns that are not filled, therefore we should erase them from the tables.
+In order to spot it we create a function that computes the percentage of NA on each column. 
+And we apply it to both tables:
+
+```{r searching_nas}
+  amountNA <- function(x) {
+    (100. * sum(is.na(x))) / length(x) 
+  }
+  trainingNA <- sapply(training, amountNA)
+  testingNA <- sapply(testing, amountNA)
+```
+
+A quick look, tell us that we have either no missing data or (almost) 100% missing data, then we can take every column that is completely filled in both tables:
+
+```{r removing_nas, cache = TRUE}
+  test.names <- names(testingNA[testingNA == 0])
+  train.names <- names(trainingNA[trainingNA == 0])
+  accepted.names <- intersect(test.names, train.names)
+  testing <- testing[ , c(accepted.names, "problem_id")]
+  training <- training[ , c(accepted.names, "classe")]
+```
+
+We want also to drop the all the timestamps, the variable X, the user name and the window information as this is specific information about the test and which differs with a future application. Then:
+
+```{r removing_other_columns, cache = TRUE}
+  training$raw_timestamp_part_1 <- NULL
+  training$raw_timestamp_part_2 <- NULL
+  training$cvtd_timestamp <- NULL
+  training$X <- NULL
+  training$user_name <- NULL
+  training$num_window <- NULL
+  testing$raw_timestamp_part_1 <- NULL
+  testing$raw_timestamp_part_2 <- NULL
+  testing$cvtd_timestamp <- NULL
+  testing$X <- NULL
+  testing$user_name <- NULL
+  testing$num_window <- NULL
+```
+
+### Splitting data
+
+The testing data corresponds to `r nrow(testing)` rows and `r ncol(testing)` columns, and the training data is `r nrow(training)` by `r ncol(testing)` table.
+As the training data is large enough, we will put aside arround **40%** of the data for testing and the remaining **60%** will be dedicated to train the data.
+
+```{r create_partition, cache = TRUE}
+  set.seed(832)
+  inTrain <- createDataPartition(training$classe, p = 0.6, list = FALSE)
+  training.data <- training[inTrain, ]
+  testing.data <- training[-inTrain, ]
+```
+
+We will train a model in the *training.data*.
+
+The *testing.data* is only used for measuring the accuracy of our method.
+We also define our simple measure of accuracy, which is the number of correctly predicted over the total number:
+
+```{r accuracy_function}
+  accuracy <- function(A, B) {
+    count <- 0
+    for(i in 1:length(A)) {
+      if (A[i] == B[i]) {
+        count <- count + 1
+      }
+    }
+    count / length(A)
+  }
+```
+
+## Building the algorithm
+
+We use a machine learning algorithm called random forest, which by now, everyone taking this course already knows it.
+
+And we use the train function to get a fit, but first we eliminate the *user_name* and *num_window* columns.:
+
+```{r honest_fit, cache=TRUE}
+  set.seed(92631)
+  fit <- train(classe ~ ., data = training.data, method = "rf"))
+```
+
+## Final remarks
+
+In order to understand how the *train* function works, the fit was done with a smaller data set (only containing one of the six users). The result was striking: almost only the *num_window* matters, so we could build a very fast algorithm only using it. The problem being that this will not be comparable with a normal usage of this algorithm. Then those columns were removed.
+
+In order to cross-validate our model, we validate it against the *testing.data* that we put apart. We build the confusion table:
+
+```{r now_predict}
+  predicted <- predict(fit, testing.data)
+  table(testing.data$classe, predicted)
+```
+
+Finally, this corresponds to an accuracy of **`r 100*accuracy(predicted, testing.data$classe)` %**.
