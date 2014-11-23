@@ -127,7 +127,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="building-the-algorithm" class="section level2">
 <h2>Building the algorithm</h2>
 <p>We use a machine learning algorithm called random forest, which by now, everyone taking this course already knows it.</p>
-<p>And we use the train function to get a fit, but first we eliminate the <em>user_name</em> and <em>num_window</em> columns.:</p>
+<p>And we use the train function to get a fit:</p>
 <pre class="r"><code>  set.seed(92631)
   fit &lt;- train(classe ~ ., data = training.data, method = &quot;rf&quot;)</code></pre>
 <pre><code>## Loading required package: randomForest
@@ -137,6 +137,8 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="final-remarks" class="section level2">
 <h2>Final remarks</h2>
 <p>In order to understand how the <em>train</em> function works, the fit was done with a smaller data set (only containing one of the six users). The result was striking: almost only the <em>num_window</em> matters, so we could build a very fast algorithm only using it. The problem being that this will not be comparable with a normal usage of this algorithm. Then those columns were removed.</p>
+<div id="cross-validation-and-expected-accuracy" class="section level3">
+<h3>Cross validation and expected accuracy</h3>
 <p>In order to cross-validate our model, we validate it against the <em>testing.data</em> that we put apart. We build the confusion table:</p>
 <pre class="r"><code>  predicted &lt;- predict(fit, testing.data)
   table(testing.data$classe, predicted)</code></pre>
@@ -147,7 +149,13 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 ##   C    0    7 1356    5    0
 ##   D    0    2   15 1262    7
 ##   E    0    0    4    5 1433</code></pre>
-<p>Finally, this corresponds to an accuracy of <strong>99.1333 %</strong>.</p>
+<p>Finally, this corresponds to an accuracy of <strong>99.1333 %</strong>. Which is quite good.</p>
+</div>
+<div id="possible-problems" class="section level3">
+<h3>Possible problems</h3>
+<p>Even if the dataset is large, there is little information (when compared to the size of the data set), as most of the observations are highly related. And it can happen that it is overfitted for the individuals in study, that is, it works because it captures the essence of this 6 individuals, but this does not mean that this will work in different people.</p>
+<p>It would be interested to test it against other individuals (not inside the training set). But this will imply a larger study, which goes farther than the goal of this little exercise.</p>
+</div>
 </div>
 
 

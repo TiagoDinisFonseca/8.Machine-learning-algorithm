@@ -111,7 +111,7 @@ We also define our simple measure of accuracy, which is the number of correctly 
 
 We use a machine learning algorithm called random forest, which by now, everyone taking this course already knows it.
 
-And we use the train function to get a fit, but first we eliminate the *user_name* and *num_window* columns.:
+And we use the train function to get a fit:
 
 ```{r honest_fit, cache=TRUE}
   set.seed(92631)
@@ -122,11 +122,20 @@ And we use the train function to get a fit, but first we eliminate the *user_nam
 
 In order to understand how the *train* function works, the fit was done with a smaller data set (only containing one of the six users). The result was striking: almost only the *num_window* matters, so we could build a very fast algorithm only using it. The problem being that this will not be comparable with a normal usage of this algorithm. Then those columns were removed.
 
+### Cross validation and expected accuracy
+
 In order to cross-validate our model, we validate it against the *testing.data* that we put apart. We build the confusion table:
 
-```{r now_predict}
+```{r now_predict, message=FALSE}
   predicted <- predict(fit, testing.data)
   table(testing.data$classe, predicted)
 ```
 
 Finally, this corresponds to an accuracy of **`r 100*accuracy(predicted, testing.data$classe)` %**.
+Which is quite good.
+
+### Possible problems
+
+Even if the dataset is large, there is little information (when compared to the size of the data set), as most of the observations are highly related. And it can happen that it is overfitted for the individuals in study, that is, it works because it captures the essence of this 6 individuals, but this does not mean that this will work in different people.
+
+It would be interested to test it against other individuals (not inside the training set). But this will imply a larger study, which goes farther than the goal of this little exercise.
