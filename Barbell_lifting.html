@@ -90,19 +90,23 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
   accepted.names &lt;- intersect(test.names, train.names)
   testing &lt;- testing[ , c(accepted.names, &quot;problem_id&quot;)]
   training &lt;- training[ , c(accepted.names, &quot;classe&quot;)]</code></pre>
-<p>We want also to drop the all the timestamps, the variable X, then:</p>
+<p>We want also to drop the all the timestamps, the variable X, the user name and the window information as this is specific information about the test and which differs with a future application. Then:</p>
 <pre class="r"><code>  training$raw_timestamp_part_1 &lt;- NULL
   training$raw_timestamp_part_2 &lt;- NULL
   training$cvtd_timestamp &lt;- NULL
   training$X &lt;- NULL
+  training$user_name &lt;- NULL
+  training$num_window &lt;- NULL
   testing$raw_timestamp_part_1 &lt;- NULL
   testing$raw_timestamp_part_2 &lt;- NULL
   testing$cvtd_timestamp &lt;- NULL
-  testing$X &lt;- NULL</code></pre>
+  testing$X &lt;- NULL
+  testing$user_name &lt;- NULL
+  testing$num_window &lt;- NULL</code></pre>
 </div>
 <div id="splitting-data" class="section level3">
 <h3>Splitting data</h3>
-<p>The testing data corresponds to 20 rows and 56 columns, and the training data is 19622 by 56 table. As the training data is large enough, we will put aside arround <strong>40%</strong> of the data for testing and the remaining <strong>60%</strong> will be dedicated to train the data.</p>
+<p>The testing data corresponds to 20 rows and 54 columns, and the training data is 19622 by 54 table. As the training data is large enough, we will put aside arround <strong>40%</strong> of the data for testing and the remaining <strong>60%</strong> will be dedicated to train the data.</p>
 <pre class="r"><code>  set.seed(832)
   inTrain &lt;- createDataPartition(training$classe, p = 0.6, list = FALSE)
   training.data &lt;- training[inTrain, ]
@@ -123,82 +127,20 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="building-the-algorithm" class="section level2">
 <h2>Building the algorithm</h2>
 <p>We use a machine learning algorithm called random forest, which by now, everyone taking this course already knows it.</p>
-<p>And we use the train function to get a fit:</p>
-<pre class="r"><code>  set.seed(1162)
-  system.time(rf_fit &lt;- train(classe ~ ., data = training.data, method = &quot;rf&quot;))</code></pre>
+<p>And we use the train function to get a fit, but first we eliminate the <em>user_name</em> and <em>num_window</em> columns.:</p>
+<pre class="r"><code>  set.seed(92631)
+  fit &lt;- train(classe ~ ., data = training.data, method = &quot;rf&quot;)</code></pre>
 <pre><code>## Loading required package: randomForest
 ## randomForest 4.6-10
 ## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<pre><code>##    user  system elapsed 
-## 9705.09   50.55 9823.12</code></pre>
-<pre class="r"><code>  set.seed(27365)
-  system.time(w_fit &lt;- train(classe ~ num_window, data = training.data, method = &quot;rf&quot;))</code></pre>
-<pre><code>## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range
-## Warning: invalid mtry: reset to within valid range</code></pre>
-<pre><code>##    user  system elapsed 
-##   177.4    17.5   195.7</code></pre>
-<pre class="r"><code>  set.seed(92631)
-  training2 &lt;- training.data
-  testing2 &lt;- testing.data
-  training2$user_name &lt;- NULL
-  training2$num_window &lt;- NULL
-  testing2$user_name &lt;- NULL
-  testing2$num_window &lt;- NULL
-  system.time(honest_fit &lt;- train(classe ~ ., data = training2, method = &quot;rf&quot;))</code></pre>
-<pre><code>##    user  system elapsed 
-## 9064.97   47.75 9123.76</code></pre>
 </div>
 <div id="final-remarks" class="section level2">
 <h2>Final remarks</h2>
-<p>We can find in data two columns <em>user_name</em> and <em>num_window</em>, which are very helpfull to predict the outcome.</p>
-<p>In order to cross-validate our model, we test it against the <em>testing.data</em> that we put apart. We build the confusion table is:</p>
-<pre class="r"><code>  predicted &lt;- predict(rf_fit, testing.data)
+<p>In order to understand how the <em>train</em> function works, the fit was done with a smaller data set (only containing one of the six users). The result was striking: almost only the <em>num_window</em> matters, so we could build a very fast algorithm only using it. The problem being that this will not be comparable with a normal usage of this algorithm. Then those columns were removed.</p>
+<p>In order to cross-validate our model, we validate it against the <em>testing.data</em> that we put apart. We build the confusion table:</p>
+<pre class="r"><code>  predicted &lt;- predict(fit, testing.data)
   table(testing.data$classe, predicted)</code></pre>
 <pre><code>##    predicted
-##        A    B    C    D    E
-##   A 2231    1    0    0    0
-##   B    5 1511    2    0    0
-##   C    0    1 1367    0    0
-##   D    0    0    8 1276    2
-##   E    0    0    0    5 1437</code></pre>
-<p>Finally, this corresponds to an accuracy of <strong>99.6941 %</strong>.</p>
-<pre class="r"><code>  w_predicted &lt;- predict(w_fit, testing.data)
-  table(testing.data$classe, w_predicted)</code></pre>
-<pre><code>##    w_predicted
-##        A    B    C    D    E
-##   A 2232    0    0    0    0
-##   B    0 1518    0    0    0
-##   C    0    0 1368    0    0
-##   D    0    0    0 1286    0
-##   E    0    0    0    1 1441</code></pre>
-<p>Finally, this corresponds to an accuracy of <strong>99.9873 %</strong>.</p>
-<pre class="r"><code>  honest_predicted &lt;- predict(honest_fit, testing.data)
-  table(testing.data$classe, honest_predicted)</code></pre>
-<pre><code>##    honest_predicted
 ##        A    B    C    D    E
 ##   A 2227    1    2    0    2
 ##   B   14 1500    4    0    0

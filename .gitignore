@@ -1,3 +1,4 @@
 .Rhistory
 *.csv
 repport_cache/*
+Barbell_lifting_cache/*

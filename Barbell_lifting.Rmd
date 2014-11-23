@@ -115,7 +115,7 @@ And we use the train function to get a fit, but first we eliminate the *user_nam
 
 ```{r honest_fit, cache=TRUE}
   set.seed(92631)
-  fit <- train(classe ~ ., data = training.data, method = "rf"))
+  fit <- train(classe ~ ., data = training.data, method = "rf")
 ```
 
 ## Final remarks
